@@ -5,6 +5,7 @@ import json
 import chromadb
 import chromadb.utils.embedding_functions as embedding_functions
 from bs4 import BeautifulSoup
+from llm_refiner import OpenAIRefiner
 
 # load_dotenv()
 ROOT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
@@ -28,6 +29,12 @@ UPDATED_IDIOMS_BOOK= "./Most_Common_American_Idioms_With_Synonyms.html"
 
 # Number of synonyms
 NUMBER_OF_SYNONYMS = 6
+
+# Synonyms JSON
+SYNONYMS_JSON= "./synonyms.json"
+
+# Synonyms JSON updated by LLM
+SYNONYMS_JSON_LLM= "./synonyms-llm.json"
 
 # logging config
 logging.basicConfig(
@@ -174,8 +181,21 @@ def add_links_to_html(file_path, link_dict):
                             link_tag = soup.new_tag('a', href=f'#{target_id}')
                             link_tag.string = target_phrase
                             link_paragraph.append(link_tag)
-                            link_paragraph.append(" ")
-                    
+                            #link_paragraph.append(" ")
+                        else:
+                            # Append the target phrase as plain text if no <h2> tag is found
+                            # Create a new <u> tag
+                            underline_tag = soup.new_tag('u')
+                            # Create the plain text string
+                            plain_text = soup.new_string(target_phrase)
+                            # Append the plain text to the <u> tag
+                            underline_tag.append(plain_text)
+                            # Append the <u> tag to the link paragraph
+                            link_paragraph.append(underline_tag)
+
+                        # Add two spaces after each link or plain text
+                        link_paragraph.append(" ")
+
                     # Insert the link paragraph after the <ul> tag
                     ul_tag.insert_after(link_paragraph)
         
@@ -232,9 +252,8 @@ def create_db():
 
 
 @cli.command()
-def update_html():
-    logging.info("Update the html file with synonyms' links")
-
+def find_synonyms():
+    logging.info("Find synonyms")
     # Call the function to parse the JSON file and generate the lists
     idioms_docs, idioms_metadata = parse_json_to_lists(IDIOMS_JSON)
 
@@ -253,6 +272,38 @@ def update_html():
 
     # Query the vector DB and generate the link dictionary
     link_dict = generate_dict_from_query_results(idioms_docs, idioms_metadata, idioms_collection_instructor)
+
+    with open('synonyms.json', 'w', encoding='utf-8') as f:
+        json.dump(link_dict, f, ensure_ascii=False, indent=4)
+
+
+@cli.command()
+def llm_refiner():
+    logging.info("Update the synonym list with GPT ")
+    openai_refiner = OpenAIRefiner(logging)  # type: ignore
+    openai_refiner.synonyms_refiner(SYNONYMS_JSON, SYNONYMS_JSON_LLM)
+
+
+
+
+@cli.command()
+@click.option(
+    "-l",
+    "--llm-refiner",
+    is_flag=True,
+    default=False,
+    help="If LLM refiner is enabled, it will use LLM refined synonyms to update the html",
+)
+def update_html(llm_refiner):
+    logging.info("Update the html file with synonyms' links")
+
+    file_path = SYNONYMS_JSON
+    if llm_refiner:
+        file_path = SYNONYMS_JSON_LLM
+
+    # load synonyms
+    with open(file_path, 'r', encoding='utf-8') as file:
+            link_dict = json.load(file)
 
     # Call the function to parse the HTML file and add links
     add_links_to_html(IDIOMS_BOOK, link_dict)
