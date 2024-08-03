@@ -3,6 +3,7 @@ import click
 import logging
 import json
 import chromadb
+from chromadb.config import Settings
 import chromadb.utils.embedding_functions as embedding_functions
 from bs4 import BeautifulSoup
 from llm_refiner import OpenAIRefiner
@@ -35,6 +36,12 @@ SYNONYMS_JSON= "./synonyms.json"
 
 # Synonyms JSON updated by LLM
 SYNONYMS_JSON_LLM= "./synonyms-llm.json"
+
+# Define the Chroma settings
+CHROMA_SETTINGS = Settings(
+    anonymized_telemetry=False,
+    is_persistent=True,
+)
 
 # logging config
 logging.basicConfig(
@@ -235,7 +242,7 @@ def create_db():
     instructor_ef = embedding_functions.InstructorEmbeddingFunction(model_name=EMBEDDING_MODEL_NAME, device="cpu")
 
     # Create chroma client 
-    chroma_client_persistent = chromadb.PersistentClient(path=PERSIST_DIRECTORY)
+    chroma_client_persistent = chromadb.PersistentClient(path=PERSIST_DIRECTORY, settings=CHROMA_SETTINGS)
 
     # Create the vector DB
     # Valid options for hnsw:space are "l2", "ip, "or "cosine". The default is "l2" which is the squared L2 norm.
@@ -261,7 +268,7 @@ def find_synonyms():
     instructor_ef = embedding_functions.InstructorEmbeddingFunction(model_name=EMBEDDING_MODEL_NAME, device="cpu")
 
     # Create chroma client 
-    chroma_client_persistent = chromadb.PersistentClient(path=PERSIST_DIRECTORY)
+    chroma_client_persistent = chromadb.PersistentClient(path=PERSIST_DIRECTORY, settings=CHROMA_SETTINGS)
     
     # Get the vector DB index
     idioms_collection_instructor = chroma_client_persistent.get_or_create_collection(
