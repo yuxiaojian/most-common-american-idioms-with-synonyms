@@ -7,6 +7,7 @@ from chromadb.config import Settings
 import chromadb.utils.embedding_functions as embedding_functions
 from bs4 import BeautifulSoup
 from llm_refiner import OpenAIRefiner
+import html
 
 # load_dotenv()
 ROOT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
@@ -156,6 +157,9 @@ def generate_dict_from_query_results(documents, metadata, idioms_collection_inst
     
     return result_dict
 
+def normalize_text(text):
+    return html.unescape(text).replace('\n', ' ').strip()
+
 # Function to parse the HTML file and add links
 def add_links_to_html(file_path, link_dict):
     try:
@@ -169,7 +173,10 @@ def add_links_to_html(file_path, link_dict):
         # Iterate over the dictionary to add links
         for source_phrase, target_phrases in link_dict.items():
             # Find the <h2> tag with the source phrase
-            h2_tag = soup.find('h2', string=lambda text: text and source_phrase in text)
+            # h2_tag = soup.find('h2', string=lambda text: text and source_phrase in text)
+            # h2_tag = soup.find('h2', string=lambda text: text and source_phrase.replace('\n', ' ') in text.replace('\n', ' '))
+            h2_tag = soup.find('h2', string=lambda text: text and normalize_text(source_phrase) in normalize_text(text))
+
             if h2_tag:
                 # Find the corresponding <ul> tag
                 ul_tag = h2_tag.find_next('ul')
