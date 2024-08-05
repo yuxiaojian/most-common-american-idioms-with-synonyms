@@ -10,6 +10,7 @@ The synonyms found from the vector DB may not all ideal. Some may not appropriat
 
 
 ## How it works
+Please also check the Medium article [A RAG Application to Find Synonyms](https://medium.com/@yuxiaojian/a-rag-application-to-find-synonyms-005e3afae6f8)
 <p align="center">
   <img src="images/workflow.png">
 </p>
